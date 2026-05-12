@@ -18,10 +18,10 @@ jobs:
         dotnet-version: '9.0.x'
 
     - name: Build solution
-      run: dotnet build ./Loket.sln -c Release
+      run: dotnet build ./Alfa1.TokenStorage.sln -c Release
 
     - name: Pack projects
-      run: dotnet pack ./Loket.sln -c Release --no-build -o ./packages
+      run: dotnet pack ./Alfa1.TokenStorage.sln -c Release --no-build -o ./packages
 
     - name: Push to NuGet
       run: dotnet nuget push "**/packages/Alfa1.TokenStorage.*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source "https://api.nuget.org/v3/index.json" --skip-duplicate

@@ -15,4 +15,4 @@ This interface is implemented by several packages:
 
 ## Used
 This package is used by the following projects:
-- https://github.com/alfa1-group/Loket
+- https://github.com/alfa1-group/Alfa1.TokenStorage
