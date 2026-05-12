@@ -1,0 +1,9 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Defines an interface for storing and retrieving Refresh and Access Tokens</Description>
+    <TargetFrameworks>netstandard2.1;net8.0</TargetFrameworks>
+    <PackageTags>Authentication;Tokens;RefreshToken;AccessToken</PackageTags>
+  </PropertyGroup>
+
+</Project>

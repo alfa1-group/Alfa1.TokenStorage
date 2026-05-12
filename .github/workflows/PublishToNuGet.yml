@@ -1,0 +1,27 @@
+name: Publish to NuGet
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: Build, Pack, and Publish
+    runs-on: windows-2022
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET 9 SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+
+    - name: Build solution
+      run: dotnet build ./Loket.sln -c Release
+
+    - name: Pack projects
+      run: dotnet pack ./Loket.sln -c Release --no-build -o ./packages
+
+    - name: Push to NuGet
+      run: dotnet nuget push "**/packages/Alfa1.TokenStorage.*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source "https://api.nuget.org/v3/index.json" --skip-duplicate

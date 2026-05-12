@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Authentication Token Storage using PostgreSQL</Description>
+    <TargetFramework>net8.0</TargetFramework>
+    <PackageTags>C#;Authentication;Tokens;AccessToken;RefreshToken;Storage;SQL;PostgreSQL</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Alfa1.TokenStorage.SqlServer\Data\AuthenticationToken.cs" Link="Data\AuthenticationToken.cs" />
+    <Compile Include="..\Alfa1.TokenStorage.SqlServer\Data\AuthenticationTokenDbContext.cs" Link="Data\AuthenticationTokenDbContext.cs" />
+    <Compile Include="..\Alfa1.TokenStorage.SqlServer\Data\AuthenticationTokenDbContext.Extensions.cs" Link="Data\AuthenticationTokenDbContext.Extensions.cs" />
+    <Compile Include="..\Alfa1.TokenStorage.SqlServer\EntityFrameworkCoreTokenStorageService.cs" Link="EntityFrameworkCoreTokenStorageService.cs" />
+    <Compile Include="..\Alfa1.TokenStorage.SqlServer\Options\EntityFrameworkCoreTokenStorageOptions.cs" Link="Options\EntityFrameworkCoreTokenStorageOptions.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Bcl.TimeProvider" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="8.0.0" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.11" />
+  </ItemGroup>
+
+  <ItemGroup>
+  
+  </ItemGroup>
+
+</Project>
