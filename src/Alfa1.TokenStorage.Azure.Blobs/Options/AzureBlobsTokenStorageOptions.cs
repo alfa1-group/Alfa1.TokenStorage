@@ -15,4 +15,6 @@ public class AzureBlobsTokenStorageOptions
 
     [Required]
     public string AccessTokenFilePath { get; set; } = "accesstoken.txt";
+
+    public string TokenIdentifier { get; set; } = string.Empty;
 }

@@ -14,11 +14,13 @@ internal class EntityFrameworkCoreTokenStorageService(
     IOptions<EntityFrameworkCoreTokenStorageOptions> options,
     IMemoryCache memoryCache,
     AuthenticationTokenDbContext dbContext,
-    TimeProvider timeProvider) : ITokenStorageService
+    TimeProvider timeProvider,
+    string? tokenIdentifier = null) : ITokenStorageService
 {
     private static readonly Random RandomJitter = new();
     private const int MaxConcurrencyRetries = 3;
     private const int RetryTimeOutInMs = 1000;
+    private readonly string _tokenIdentifier = string.IsNullOrWhiteSpace(tokenIdentifier) ? options.Value.TokenIdentifier : tokenIdentifier;
 
     public async Task<string> StoreRefreshTokenAsync(string currentRefreshToken, string newRefreshToken, CancellationToken cancellationToken = default)
     {
@@ -27,12 +29,13 @@ internal class EntityFrameworkCoreTokenStorageService(
 
         for (var attempt = 1; attempt <= MaxConcurrencyRetries; attempt++)
         {
-            var entity = await dbContext.Tokens.SingleOrDefaultAsync(cancellationToken);
+            var entity = await dbContext.Tokens.SingleOrDefaultAsync(x => x.TokenIdentifier == _tokenIdentifier, cancellationToken);
 
             if (entity == null)
             {
                 entity = new AuthenticationToken
                 {
+                    TokenIdentifier = _tokenIdentifier,
                     RefreshToken = newRefreshToken,
                     RefreshTokenUpdatedAt = timeProvider.GetUtcNow()
                 };
@@ -41,10 +44,9 @@ internal class EntityFrameworkCoreTokenStorageService(
             }
             else
             {
-                // Only change if database still has the token we just used.
                 if (entity.RefreshToken != currentRefreshToken)
                 {
-                    logger.LogInformation("Skipping refresh token update. Database already contains a newer refresh token (attempt {Attempt}).", attempt);
+                    logger.LogInformation("Skipping refresh token update for {TokenIdentifier}. Database already contains a newer refresh token (attempt {Attempt}).", _tokenIdentifier, attempt);
                     return entity.RefreshToken;
                 }
 
@@ -59,7 +61,7 @@ internal class EntityFrameworkCoreTokenStorageService(
             }
             catch (DbUpdateConcurrencyException ex)
             {
-                logger.LogWarning(ex, "Concurrency conflict while storing refresh token (attempt {Attempt}/{Max}).", attempt, MaxConcurrencyRetries);
+                logger.LogWarning(ex, "Concurrency conflict while storing refresh token for {TokenIdentifier} (attempt {Attempt}/{Max}).", _tokenIdentifier, attempt, MaxConcurrencyRetries);
 
                 if (attempt == MaxConcurrencyRetries)
                 {
@@ -75,15 +77,15 @@ internal class EntityFrameworkCoreTokenStorageService(
             }
         }
 
-        return newRefreshToken; // Should not reach here.
+        return newRefreshToken;
     }
 
     public async Task<string> RetrieveRefreshTokenAsync(CancellationToken cancellationToken = default)
     {
-        var entity = await dbContext.Tokens.AsNoTracking().SingleOrDefaultAsync(cancellationToken);
+        var entity = await dbContext.Tokens.AsNoTracking().SingleOrDefaultAsync(x => x.TokenIdentifier == _tokenIdentifier, cancellationToken);
         if (entity == null)
         {
-            logger.LogInformation("Token entity does not exist in table {Table}. Returning empty string for RefreshToken.", options.Value.TableName);
+            logger.LogInformation("Token entity does not exist in table {Table} for {TokenIdentifier}. Returning empty string for RefreshToken.", options.Value.TableName, _tokenIdentifier);
             return string.Empty;
         }
 
@@ -97,25 +99,25 @@ internal class EntityFrameworkCoreTokenStorageService(
             return accessToken;
         }
 
-        var entity = await dbContext.Tokens.AsNoTracking().SingleOrDefaultAsync(cancellationToken);
+        var entity = await dbContext.Tokens.AsNoTracking().SingleOrDefaultAsync(x => x.TokenIdentifier == _tokenIdentifier, cancellationToken);
         if (entity == null)
         {
-            logger.LogInformation("Token entity does not exist in table {Table}. Returning empty string for AccessToken.", options.Value.TableName);
+            logger.LogInformation("Token entity does not exist in table {Table} for {TokenIdentifier}. Returning empty string for AccessToken.", options.Value.TableName, _tokenIdentifier);
             return string.Empty;
         }
 
         if (string.IsNullOrEmpty(entity.AccessToken))
         {
-            logger.LogInformation("AccessToken is null or empty in table {Table}. Returning empty string for AccessToken.", options.Value.TableName);
+            logger.LogInformation("AccessToken is null or empty in table {Table} for {TokenIdentifier}. Returning empty string for AccessToken.", options.Value.TableName, _tokenIdentifier);
             return string.Empty;
         }
 
         if (timeProvider.GetUtcNow() <= entity.AccessTokenExpire)
         {
-            return memoryCache.Set(options.Value.AccessTokenColumnName, entity.AccessToken, entity.AccessTokenExpire);
+            return memoryCache.Set(GetAccessTokenCacheKey(), entity.AccessToken, entity.AccessTokenExpire);
         }
 
-        logger.LogInformation("AccessToken is expired at {AccessTokenExpire}. Returning empty string value for AccessToken.", entity.AccessTokenExpire);
+        logger.LogInformation("AccessToken is expired at {AccessTokenExpire} for {TokenIdentifier}. Returning empty string value for AccessToken.", entity.AccessTokenExpire, _tokenIdentifier);
         return string.Empty;
     }
 
@@ -125,24 +127,20 @@ internal class EntityFrameworkCoreTokenStorageService(
 
         for (var attempt = 1; attempt <= MaxConcurrencyRetries; attempt++)
         {
-            var entity = await dbContext.Tokens.SingleOrDefaultAsync(cancellationToken);
+            var entity = await dbContext.Tokens.SingleOrDefaultAsync(x => x.TokenIdentifier == _tokenIdentifier, cancellationToken);
             if (entity == null)
             {
-                logger.LogInformation("Token entity does not exist in table {Table}. Returning empty string for AccessToken.", options.Value.TableName);
+                logger.LogInformation("Token entity does not exist in table {Table} for {TokenIdentifier}. Returning empty string for AccessToken.", options.Value.TableName, _tokenIdentifier);
                 return string.Empty;
             }
 
-            // Skip update if:
-            // - currentAccessToken is not null or empty
-            // - database contains a newer access token than the one we just used
             if (!string.IsNullOrEmpty(currentAccessToken) && !string.IsNullOrEmpty(entity.AccessToken) && entity.AccessToken != currentAccessToken)
             {
-                logger.LogInformation("Skipping access token update. Database already contains a newer access token (attempt {Attempt}).", attempt);
+                logger.LogInformation("Skipping access token update for {TokenIdentifier}. Database already contains a newer access token (attempt {Attempt}).", _tokenIdentifier, attempt);
 
-                // Add to cache if not present.
                 if (!TryGetNonEmptyAccessTokenFromCache(out _))
                 {
-                    return memoryCache.Set(options.Value.AccessTokenColumnName, entity.AccessToken, entity.AccessTokenExpire);
+                    return memoryCache.Set(GetAccessTokenCacheKey(), entity.AccessToken, entity.AccessTokenExpire);
                 }
 
                 return entity.AccessToken;
@@ -156,11 +154,11 @@ internal class EntityFrameworkCoreTokenStorageService(
             try
             {
                 await dbContext.SaveChangesAsync(cancellationToken);
-                return memoryCache.Set(options.Value.AccessTokenColumnName, newAccessToken, absoluteExpirationRelativeToUtcNow);
+                return memoryCache.Set(GetAccessTokenCacheKey(), newAccessToken, absoluteExpirationRelativeToUtcNow);
             }
             catch (DbUpdateConcurrencyException ex)
             {
-                logger.LogWarning(ex, "Concurrency conflict while storing access token (attempt {Attempt}/{Max}).", attempt, MaxConcurrencyRetries);
+                logger.LogWarning(ex, "Concurrency conflict while storing access token for {TokenIdentifier} (attempt {Attempt}/{Max}).", _tokenIdentifier, attempt, MaxConcurrencyRetries);
 
                 if (attempt == MaxConcurrencyRetries)
                 {
@@ -176,12 +174,12 @@ internal class EntityFrameworkCoreTokenStorageService(
             }
         }
 
-        return string.Empty; // Should not reach here.
+        return string.Empty;
     }
 
     private bool TryGetNonEmptyAccessTokenFromCache([NotNullWhen(true)] out string? accessToken)
     {
-        if (memoryCache.TryGetValue(options.Value.AccessTokenColumnName, out accessToken))
+        if (memoryCache.TryGetValue(GetAccessTokenCacheKey(), out accessToken))
         {
             return !string.IsNullOrEmpty(accessToken);
         }
@@ -189,9 +187,10 @@ internal class EntityFrameworkCoreTokenStorageService(
         return false;
     }
 
+    private string GetAccessTokenCacheKey() => $"{options.Value.AccessTokenColumnName}:{_tokenIdentifier}";
+
     private static Task WaitAsync(CancellationToken cancellationToken)
     {
-        // Wait some time (1000 ms) with a bit of random jitter (0-500 ms) to avoid synchronized retries.
         return Task.Delay(RetryTimeOutInMs + RandomJitter.Next(0, 500), cancellationToken);
     }
 }

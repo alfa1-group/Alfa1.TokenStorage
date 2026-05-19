@@ -14,6 +14,9 @@ public partial class AuthenticationTokenDbContext(DbContextOptions<Authenticatio
     {
         modelBuilder.Entity<AuthenticationToken>().ToTable(_storageOptions.TableName);
 
+        modelBuilder.Entity<AuthenticationToken>().Property(p => p.TokenIdentifier).HasColumnName(_storageOptions.TokenIdentifierColumnName);
+        modelBuilder.Entity<AuthenticationToken>().HasIndex(p => p.TokenIdentifier).IsUnique();
+
         modelBuilder.Entity<AuthenticationToken>().Property(p => p.RefreshToken).HasColumnName(_storageOptions.RefreshTokenColumnName);
         modelBuilder.Entity<AuthenticationToken>().Property(p => p.RefreshTokenUpdatedAt).HasColumnName(_storageOptions.RefreshTokenUpdatedAtColumnName);
 

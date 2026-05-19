@@ -11,6 +11,12 @@ public class EntityFrameworkCoreTokenStorageOptions
     public string TableName { get; set; } = "Tokens";
 
     [Required]
+    public string TokenIdentifierColumnName { get; set; } = "TokenIdentifier";
+
+    [Required]
+    public string TokenIdentifier { get; set; } = "default";
+
+    [Required]
     public string RefreshTokenColumnName { get; set; } = "RefreshToken";
 
     [Required]

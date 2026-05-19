@@ -9,4 +9,6 @@ public class FileSystemTokenStorageOptions
 
     [Required]
     public string AccessTokenFilePath { get; set; } = null!;
+
+    public string TokenIdentifier { get; set; } = string.Empty;
 }

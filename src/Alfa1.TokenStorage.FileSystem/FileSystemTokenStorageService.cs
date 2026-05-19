@@ -6,10 +6,14 @@ using Microsoft.Extensions.Options;
 
 namespace Alfa1.TokenStorage.FileSystem;
 
-internal class FileSystemTokenStorageService(ILogger<FileSystemTokenStorageService> logger, IOptions<FileSystemTokenStorageOptions> options, IMemoryCache memoryCache) :
+internal class FileSystemTokenStorageService(ILogger<FileSystemTokenStorageService> logger, IOptions<FileSystemTokenStorageOptions> options, IMemoryCache memoryCache, string? tokenIdentifier = null) :
     ITokenStorageService
 {
-    private readonly string _refreshTokenFilePath = options.Value.RefreshTokenFilePath;
+    private readonly string _tokenIdentifier = string.IsNullOrWhiteSpace(tokenIdentifier) ? options.Value.TokenIdentifier : tokenIdentifier;
+    private readonly string _refreshTokenFilePath = ResolveScopedPath(options.Value.RefreshTokenFilePath,
+        string.IsNullOrWhiteSpace(tokenIdentifier) ? options.Value.TokenIdentifier : tokenIdentifier);
+    private readonly string _accessTokenFilePath = ResolveScopedPath(options.Value.AccessTokenFilePath,
+        string.IsNullOrWhiteSpace(tokenIdentifier) ? options.Value.TokenIdentifier : tokenIdentifier);
 
     public async Task<string> RetrieveRefreshTokenAsync(CancellationToken cancellationToken = default)
     {
@@ -36,7 +40,7 @@ internal class FileSystemTokenStorageService(ILogger<FileSystemTokenStorageServi
 
     public Task<string> RetrieveAccessTokenAsync(CancellationToken cancellationToken = default)
     {
-        if (memoryCache.TryGetValue(options.Value.AccessTokenFilePath, out string? accessToken) && !string.IsNullOrEmpty(accessToken))
+        if (memoryCache.TryGetValue(GetAccessTokenCacheKey(), out string? accessToken) && !string.IsNullOrEmpty(accessToken))
         {
             return Task.FromResult(accessToken);
         }
@@ -54,6 +58,30 @@ internal class FileSystemTokenStorageService(ILogger<FileSystemTokenStorageServi
             return existingAccessToken;
         }
 
-        return memoryCache.Set(options.Value.AccessTokenFilePath, newAccessToken, absoluteExpirationRelativeToUtcNow);
+        return memoryCache.Set(GetAccessTokenCacheKey(), newAccessToken, absoluteExpirationRelativeToUtcNow);
+    }
+
+    private string GetAccessTokenCacheKey() => string.IsNullOrWhiteSpace(_tokenIdentifier)
+        ? _accessTokenFilePath
+        : $"{_accessTokenFilePath}:{_tokenIdentifier}";
+
+    private static string ResolveScopedPath(string path, string? tokenIdentifier)
+    {
+        if (string.IsNullOrWhiteSpace(tokenIdentifier))
+        {
+            return path;
+        }
+
+        var directory = Path.GetDirectoryName(path);
+        var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(path);
+        var extension = Path.GetExtension(path);
+        var scopedFileName = $"{fileNameWithoutExtension}.{tokenIdentifier}{extension}";
+
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            return scopedFileName;
+        }
+
+        return Path.Combine(directory, scopedFileName);
     }
 }
