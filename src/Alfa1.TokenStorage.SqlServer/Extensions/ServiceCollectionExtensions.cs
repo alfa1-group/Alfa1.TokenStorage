@@ -11,15 +11,19 @@ namespace Microsoft.Extensions.DependencyInjection;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddTokenStorageSqlServer(this IServiceCollection services, IConfiguration configuration, ServiceLifetime dbContextLifetime = ServiceLifetime.Scoped)
+    public static IServiceCollection AddTokenStorageSqlServer(this IServiceCollection services, IConfiguration configuration,
+        string tokenIdentifier = "default", ServiceLifetime dbContextLifetime = ServiceLifetime.Scoped)
     {
         ConfigureDependencies(services, configuration, dbContextLifetime);
 
         return dbContextLifetime switch
         {
-            ServiceLifetime.Singleton => services.AddSingleton<ITokenStorageService, EntityFrameworkCoreTokenStorageService>(),
-            ServiceLifetime.Scoped => services.AddScoped<ITokenStorageService, EntityFrameworkCoreTokenStorageService>(),
-            _ => services.AddTransient<ITokenStorageService, EntityFrameworkCoreTokenStorageService>()
+            ServiceLifetime.Singleton => services.AddSingleton<ITokenStorageService>(serviceProvider =>
+                ActivatorUtilities.CreateInstance<EntityFrameworkCoreTokenStorageService>(serviceProvider, tokenIdentifier)),
+            ServiceLifetime.Scoped => services.AddScoped<ITokenStorageService>(serviceProvider =>
+                ActivatorUtilities.CreateInstance<EntityFrameworkCoreTokenStorageService>(serviceProvider, tokenIdentifier)),
+            _ => services.AddTransient<ITokenStorageService>(serviceProvider =>
+                ActivatorUtilities.CreateInstance<EntityFrameworkCoreTokenStorageService>(serviceProvider, tokenIdentifier))
         };
     }
 
