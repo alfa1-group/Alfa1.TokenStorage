@@ -9,10 +9,10 @@ namespace Alfa1.TokenStorage.FileSystem;
 internal class FileSystemTokenStorageService(ILogger<FileSystemTokenStorageService> logger, IOptions<FileSystemTokenStorageOptions> options, IMemoryCache memoryCache, string? tokenIdentifier = null) :
     ITokenStorageService
 {
-    private readonly string _tokenIdentifier = string.IsNullOrWhiteSpace(tokenIdentifier) ? options.Value.TokenIdentifier : tokenIdentifier;
-    private readonly string _refreshTokenFilePath = ResolveScopedPath(options.Value.RefreshTokenFilePath,
+    private const string TokenIdentifierPlaceholder = "{tokenIdentifier}";
+    private readonly string _refreshTokenFilePath = ResolvePath(options.Value.RefreshTokenFilePathTemplate ?? options.Value.RefreshTokenFilePath,
         string.IsNullOrWhiteSpace(tokenIdentifier) ? options.Value.TokenIdentifier : tokenIdentifier);
-    private readonly string _accessTokenFilePath = ResolveScopedPath(options.Value.AccessTokenFilePath,
+    private readonly string _accessTokenFilePath = ResolvePath(options.Value.AccessTokenFilePathTemplate ?? options.Value.AccessTokenFilePath,
         string.IsNullOrWhiteSpace(tokenIdentifier) ? options.Value.TokenIdentifier : tokenIdentifier);
 
     public async Task<string> RetrieveRefreshTokenAsync(CancellationToken cancellationToken = default)
@@ -61,27 +61,15 @@ internal class FileSystemTokenStorageService(ILogger<FileSystemTokenStorageServi
         return memoryCache.Set(GetAccessTokenCacheKey(), newAccessToken, absoluteExpirationRelativeToUtcNow);
     }
 
-    private string GetAccessTokenCacheKey() => string.IsNullOrWhiteSpace(_tokenIdentifier)
-        ? _accessTokenFilePath
-        : $"{_accessTokenFilePath}:{_tokenIdentifier}";
+    private string GetAccessTokenCacheKey() => _accessTokenFilePath;
 
-    private static string ResolveScopedPath(string path, string? tokenIdentifier)
+    private static string ResolvePath(string template, string? tokenIdentifier)
     {
         if (string.IsNullOrWhiteSpace(tokenIdentifier))
         {
-            return path;
+            return template.Replace(TokenIdentifierPlaceholder, string.Empty);
         }
 
-        var directory = Path.GetDirectoryName(path);
-        var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(path);
-        var extension = Path.GetExtension(path);
-        var scopedFileName = $"{fileNameWithoutExtension}.{tokenIdentifier}{extension}";
-
-        if (string.IsNullOrWhiteSpace(directory))
-        {
-            return scopedFileName;
-        }
-
-        return Path.Combine(directory, scopedFileName);
+        return template.Replace(TokenIdentifierPlaceholder, tokenIdentifier);
     }
 }

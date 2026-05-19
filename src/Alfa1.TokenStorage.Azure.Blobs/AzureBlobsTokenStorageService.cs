@@ -17,16 +17,16 @@ internal class AzureBlobsTokenStorageService(
     string? tokenIdentifier = null) : ITokenStorageService
 {
     private const string MetadataAbsoluteExpirationRelativeToUtcNow = "AbsoluteExpirationRelativeToUtcNow";
+    private const string TokenIdentifierPlaceholder = "{tokenIdentifier}";
 
-    private readonly string _tokenIdentifier = string.IsNullOrWhiteSpace(tokenIdentifier) ? options.Value.TokenIdentifier : tokenIdentifier;
-    private readonly string _refreshTokenBlobPath = ResolveScopedPath(options.Value.RefreshTokenFilePath,
+    private readonly string _refreshTokenBlobPath = ResolvePath(options.Value.RefreshTokenFilePathTemplate ?? options.Value.RefreshTokenFilePath,
         string.IsNullOrWhiteSpace(tokenIdentifier) ? options.Value.TokenIdentifier : tokenIdentifier);
-    private readonly string _accessTokenBlobPath = ResolveScopedPath(options.Value.AccessTokenFilePath,
+    private readonly string _accessTokenBlobPath = ResolvePath(options.Value.AccessTokenFilePathTemplate ?? options.Value.AccessTokenFilePath,
         string.IsNullOrWhiteSpace(tokenIdentifier) ? options.Value.TokenIdentifier : tokenIdentifier);
 
-    private readonly BlobClient _refreshTokenBlobClient = blobContainerClient.GetBlobClient(ResolveScopedPath(options.Value.RefreshTokenFilePath,
+    private readonly BlobClient _refreshTokenBlobClient = blobContainerClient.GetBlobClient(ResolvePath(options.Value.RefreshTokenFilePathTemplate ?? options.Value.RefreshTokenFilePath,
         string.IsNullOrWhiteSpace(tokenIdentifier) ? options.Value.TokenIdentifier : tokenIdentifier));
-    private readonly BlobClient _accessTokenBlobClient = blobContainerClient.GetBlobClient(ResolveScopedPath(options.Value.AccessTokenFilePath,
+    private readonly BlobClient _accessTokenBlobClient = blobContainerClient.GetBlobClient(ResolvePath(options.Value.AccessTokenFilePathTemplate ?? options.Value.AccessTokenFilePath,
         string.IsNullOrWhiteSpace(tokenIdentifier) ? options.Value.TokenIdentifier : tokenIdentifier));
 
     public async Task<string> RetrieveRefreshTokenAsync(CancellationToken cancellationToken = default)
@@ -114,31 +114,15 @@ internal class AzureBlobsTokenStorageService(
         return newAccessToken;
     }
 
-    private string GetAccessTokenCacheKey() => string.IsNullOrWhiteSpace(_tokenIdentifier)
-        ? _accessTokenBlobPath
-        : $"{_accessTokenBlobPath}:{_tokenIdentifier}";
+    private string GetAccessTokenCacheKey() => _accessTokenBlobPath;
 
-    private static string ResolveScopedPath(string path, string? tokenIdentifier)
+    private static string ResolvePath(string template, string? tokenIdentifier)
     {
         if (string.IsNullOrWhiteSpace(tokenIdentifier))
         {
-            return path;
+            return template.Replace(TokenIdentifierPlaceholder, string.Empty);
         }
 
-        var normalizedPath = path.Replace('\\', '/');
-        var separatorIndex = normalizedPath.LastIndexOf('/');
-        var directory = separatorIndex >= 0 ? normalizedPath[..(separatorIndex + 1)] : string.Empty;
-        var fileName = separatorIndex >= 0 ? normalizedPath[(separatorIndex + 1)..] : normalizedPath;
-
-        var extensionIndex = fileName.LastIndexOf('.');
-        if (extensionIndex <= 0)
-        {
-            return $"{directory}{fileName}.{tokenIdentifier}";
-        }
-
-        var name = fileName[..extensionIndex];
-        var extension = fileName[extensionIndex..];
-
-        return $"{directory}{name}.{tokenIdentifier}{extension}";
+        return template.Replace(TokenIdentifierPlaceholder, tokenIdentifier);
     }
 }

@@ -27,6 +27,27 @@ services.AddTokenStorageSqlServerFor<TypeA>(configuration, "TypeAToken");
 services.AddTokenStorageSqlServerFor<TypeB>(configuration); // defaults to "TypeB"
 ```
 
+`appsettings.json` for SQL Server:
+
+```json
+{
+  "ConnectionStrings": {
+    "Tokens": "Server=.;Database=TokenDb;Trusted_Connection=True;TrustServerCertificate=True"
+  },
+  "SqlServerTokenStorageOptions": {
+    "ConnectionStringName": "Tokens",
+    "TableName": "Tokens",
+    "TokenIdentifierColumnName": "TokenIdentifier",
+    "TokenIdentifier": "default",
+    "RefreshTokenColumnName": "RefreshToken",
+    "RefreshTokenUpdatedAtColumnName": "RefreshTokenUpdatedAt",
+    "AccessTokenColumnName": "AccessToken",
+    "AccessTokenUpdatedAtColumnName": "AccessTokenUpdatedAt",
+    "AccessTokenExpireColumnName": "AccessTokenExpireAt"
+  }
+}
+```
+
 ## PostgreSQL
 
 ```csharp
@@ -40,6 +61,27 @@ services.AddKeyedAuthenticationTokenStoragePostgreSQL("TypeB", "TypeBToken", con
 // Individual registrations (bind token store per dependent type)
 services.AddAuthenticationTokenStoragePostgreSQLFor<TypeA>(configuration, "TypeAToken");
 services.AddAuthenticationTokenStoragePostgreSQLFor<TypeB>(configuration); // defaults to "TypeB"
+```
+
+`appsettings.json` for PostgreSQL:
+
+```json
+{
+  "ConnectionStrings": {
+    "Tokens": "Host=localhost;Port=5432;Database=token_db;Username=postgres;Password=postgres"
+  },
+  "PostgreSQLTokenStorageOptions": {
+    "ConnectionStringName": "Tokens",
+    "TableName": "Tokens",
+    "TokenIdentifierColumnName": "TokenIdentifier",
+    "TokenIdentifier": "default",
+    "RefreshTokenColumnName": "RefreshToken",
+    "RefreshTokenUpdatedAtColumnName": "RefreshTokenUpdatedAt",
+    "AccessTokenColumnName": "AccessToken",
+    "AccessTokenUpdatedAtColumnName": "AccessTokenUpdatedAt",
+    "AccessTokenExpireColumnName": "AccessTokenExpireAt"
+  }
+}
 ```
 
 ## File system
@@ -57,6 +99,31 @@ services.AddTokenStorageFileSystemFor<TypeA>(configuration, "TypeAToken");
 services.AddTokenStorageFileSystemFor<TypeB>(configuration); // defaults to "TypeB"
 ```
 
+`appsettings.json` for File system:
+
+```json
+{
+  "FileSystemTokenStorageOptions": {
+    "TokenIdentifier": "default",
+    "RefreshTokenFilePathTemplate": "tokens/refresh.{tokenIdentifier}.txt",
+    "AccessTokenFilePathTemplate": "tokens/access.{tokenIdentifier}.txt"
+  }
+}
+```
+
+`FileSystemTokenStorageOptions` supports template paths using `{tokenIdentifier}`:
+
+```json
+{
+  "FileSystemTokenStorageOptions": {
+    "RefreshTokenFilePathTemplate": "tokens/refresh.{tokenIdentifier}.txt",
+    "AccessTokenFilePathTemplate": "tokens/access.{tokenIdentifier}.txt"
+  }
+}
+```
+
+For `TypeAToken` this resolves to `tokens/refresh.TypeAToken.txt` and `tokens/access.TypeAToken.txt`.
+
 ## Azure Blobs
 
 ```csharp
@@ -71,6 +138,33 @@ services.AddKeyedTokenStorageAzureBlobs("TypeB", "TypeBToken", configuration);
 services.AddTokenStorageAzureBlobsFor<TypeA>(configuration, "TypeAToken");
 services.AddTokenStorageAzureBlobsFor<TypeB>(configuration); // defaults to "TypeB"
 ```
+
+`appsettings.json` for Azure Blobs:
+
+```json
+{
+  "AzureBlobsTokenStorageOptions": {
+    "ConnectionString": "<azure-storage-connection-string>",
+    "ContainerName": "tokens",
+    "TokenIdentifier": "default",
+    "RefreshTokenFilePathTemplate": "refresh.{tokenIdentifier}.txt",
+    "AccessTokenFilePathTemplate": "access.{tokenIdentifier}.txt"
+  }
+}
+```
+
+`AzureBlobsTokenStorageOptions` supports template blob paths using `{tokenIdentifier}`:
+
+```json
+{
+  "AzureBlobsTokenStorageOptions": {
+    "RefreshTokenFilePathTemplate": "refresh.{tokenIdentifier}.txt",
+    "AccessTokenFilePathTemplate": "access.{tokenIdentifier}.txt"
+  }
+}
+```
+
+For `TypeAToken` this resolves to `refresh.TypeAToken.txt` and `access.TypeAToken.txt`.
 
 ---
 
