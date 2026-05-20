@@ -4,6 +4,7 @@
     <Description>Authentication Token Storage using SqlServer</Description>
     <TargetFramework>net8.0</TargetFramework>
     <PackageTags>APIs;Client;Authentication;Tokens;AccessToken;RefreshToken;Storage;SQL;SqlServer</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,6 +17,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Alfa1.TokenStorage.Abstractions\Alfa1.TokenStorage.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md" Pack="true" PackagePath="\" Link="README.md" />
   </ItemGroup>
 
 </Project>

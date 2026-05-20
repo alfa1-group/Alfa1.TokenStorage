@@ -8,6 +8,10 @@ public class AuthenticationToken
     public int Id { get; set; }
 
     [Required]
+    [MaxLength(256)]
+    public string TokenIdentifier { get; set; } = null!;
+
+    [Required]
     [MaxLength(1024)]
     public string RefreshToken { get; set; } = null!;
 

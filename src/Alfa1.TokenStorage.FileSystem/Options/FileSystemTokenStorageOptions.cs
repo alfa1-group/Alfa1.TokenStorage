@@ -4,9 +4,17 @@ namespace Alfa1.TokenStorage.FileSystem.Options;
 
 public class FileSystemTokenStorageOptions
 {
-    [Required]
-    public string RefreshTokenFilePath { get; set; } = null!;
+    private const string DefaultTokenIdentifierPlaceholder = "{tokenIdentifier}";
 
     [Required]
-    public string AccessTokenFilePath { get; set; } = null!;
+    public string RefreshTokenFilePath { get; set; } = $"refreshtoken.{DefaultTokenIdentifierPlaceholder}.txt";
+
+    [Required]
+    public string AccessTokenFilePath { get; set; } = $"accesstoken.{DefaultTokenIdentifierPlaceholder}.txt";
+
+    public string? RefreshTokenFilePathTemplate { get; set; }
+
+    public string? AccessTokenFilePathTemplate { get; set; }
+
+    public string TokenIdentifier { get; set; } = string.Empty;
 }
