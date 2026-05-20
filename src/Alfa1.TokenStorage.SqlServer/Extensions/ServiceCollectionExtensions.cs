@@ -90,6 +90,19 @@ public static class ServiceCollectionExtensions
         };
     }
 
+    public static IServiceProvider InitializeTokenStorageSqlServer(this IServiceProvider serviceProvider)
+    {
+        ArgumentNullException.ThrowIfNull(serviceProvider);
+
+        using var scope = serviceProvider.CreateScope();
+        using var dbContext = scope.ServiceProvider.GetRequiredService<AuthenticationTokenDbContext>();
+
+        dbContext.Database.EnsureCreated();
+        dbContext.EnsureAuthenticationTokenTableExists();
+
+        return serviceProvider;
+    }
+
     private static void ConfigureDependencies(IServiceCollection services, IConfiguration configuration, ServiceLifetime dbContextLifetime)
     {
         services.AddOptions<EntityFrameworkCoreTokenStorageOptions>()
@@ -105,22 +118,10 @@ public static class ServiceCollectionExtensions
 
             options.UseSqlServer(connectionString);
         }, dbContextLifetime);
-
-        services.EnsureTokenTableExists();
     }
 
     private static EntityFrameworkCoreTokenStorageOptions GetOptions(this IServiceProvider serviceProvider)
     {
         return serviceProvider.GetRequiredService<IOptions<EntityFrameworkCoreTokenStorageOptions>>().Value;
-    }
-
-    private static void EnsureTokenTableExists(this IServiceCollection services)
-    {
-        using var serviceProvider = services.BuildServiceProvider();
-        using var scope = serviceProvider.CreateScope();
-        using var dbContext = scope.ServiceProvider.GetRequiredService<AuthenticationTokenDbContext>();
-
-        dbContext.Database.EnsureCreated();
-        dbContext.EnsureAuthenticationTokenTableExists();
     }
 }

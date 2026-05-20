@@ -27,6 +27,20 @@ services.AddTokenStorageSqlServerFor<TypeA>(configuration, "TypeAToken");
 services.AddTokenStorageSqlServerFor<TypeB>(configuration); // defaults to "TypeB"
 ```
 
+SQL Server schema initialization is explicit and should be done during app startup, after DI registration:
+
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddTokenStorageSqlServer(builder.Configuration);
+
+var app = builder.Build();
+
+app.Services.InitializeTokenStorageSqlServer();
+```
+
+This startup-time initialization is the recommended pattern.
+
 `appsettings.json` for SQL Server:
 
 ```json
